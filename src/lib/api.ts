@@ -60,13 +60,13 @@ export const generateControlNetImage = async ({
       return getMockImageData(n);
     }
     
-    // Convert image to base64
-    const imageBase64 = await fileToBase64(image);
-    const maskBase64 = mask ? await fileToBase64(mask) : undefined;
+    // Convert image File to a Blob which is acceptable as an OpenAI Uploadable type
+    const imageBlob = new Blob([image], { type: image.type });
+    const maskBlob = mask ? new Blob([mask], { type: mask.type }) : undefined;
 
     const response = await openai.images.edit({
-      image: imageBase64,
-      mask: maskBase64,
+      image: imageBlob,
+      mask: maskBlob,
       prompt,
       n,
       size,
@@ -78,6 +78,7 @@ export const generateControlNetImage = async ({
   }
 };
 
+// No need to change this function as we're now using Blobs directly
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
