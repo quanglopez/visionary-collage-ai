@@ -4,13 +4,43 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Upload, Target, PenTool, Layout } from 'lucide-react';
+import ImageUploader from './ImageUploader';
+import GoalInput from './GoalInput';
+import ImageGenerator from './ImageGenerator';
+import VisionBoardLayout from './VisionBoardLayout';
+import { useVisionBoard } from '@/contexts/VisionBoardContext';
+import { useToast } from '@/hooks/use-toast';
 
 const WizardSection: React.FC = () => {
   const [activeTab, setActiveTab] = useState('upload');
+  const { state, uploadPhoto, addGoal, removeGoal, updateGoal, addGeneratedImage, toggleImageSelection, setLayout, setBackgroundColor } = useVisionBoard();
+  const { toast } = useToast();
 
   const handleNext = (nextTab: string) => {
+    // Validation before moving to next tab
+    if (activeTab === 'upload' && !state.userPhoto) {
+      toast({
+        title: "Photo required",
+        description: "Please upload your photo before continuing.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (activeTab === 'goals' && state.goals.length === 0) {
+      toast({
+        title: "Goals required",
+        description: "Please add at least one goal before continuing.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setActiveTab(nextTab);
   };
+
+  // Get only the selected images for the vision board layout
+  const selectedImages = state.generatedImages.filter(img => img.selected);
 
   return (
     <section id="how-it-works" className="py-20 bg-gradient-to-b from-background to-secondary/30">
@@ -75,17 +105,16 @@ const WizardSection: React.FC = () => {
                   <Button 
                     className="mt-4 bg-vision-purple hover:bg-vision-darkPurple" 
                     onClick={() => handleNext('goals')}
+                    disabled={!state.userPhoto}
                   >
                     Next Step
                   </Button>
                 </div>
                 <div className="flex items-center justify-center bg-muted/30 rounded-lg p-4">
-                  <div className="w-full aspect-square max-w-[240px] border-2 border-dashed border-muted-foreground/50 rounded-lg flex flex-col items-center justify-center p-4">
-                    <Upload className="w-12 h-12 text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground text-center">
-                      Drag and drop your photo here or click to browse
-                    </p>
-                  </div>
+                  <ImageUploader 
+                    onImageUpload={uploadPhoto}
+                    currentImage={state.userPhoto}
+                  />
                 </div>
               </div>
             </TabsContent>
@@ -118,26 +147,19 @@ const WizardSection: React.FC = () => {
                     <Button 
                       className="bg-vision-purple hover:bg-vision-darkPurple" 
                       onClick={() => handleNext('generate')}
+                      disabled={state.goals.length === 0}
                     >
                       Next Step
                     </Button>
                   </div>
                 </div>
                 <div className="flex flex-col gap-4">
-                  <textarea 
-                    className="w-full h-40 p-4 border rounded-lg focus:ring-2 focus:ring-vision-purple focus:border-vision-purple outline-none" 
-                    placeholder="Enter your goals here:
-                    
-Example:
-- Launch my product by December (Professional)
-- Lose 10kg by summer (Health)
-                    "
+                  <GoalInput 
+                    onAddGoal={addGoal}
+                    goals={state.goals}
+                    onRemoveGoal={removeGoal}
+                    onUpdateGoal={updateGoal}
                   />
-                  <div className="grid grid-cols-3 gap-2">
-                    <Button variant="outline" size="sm" className="text-xs">Professional</Button>
-                    <Button variant="outline" size="sm" className="text-xs">Health</Button>
-                    <Button variant="outline" size="sm" className="text-xs">Personal</Button>
-                  </div>
                 </div>
               </div>
             </TabsContent>
@@ -170,22 +192,20 @@ Example:
                     <Button 
                       className="bg-vision-purple hover:bg-vision-darkPurple" 
                       onClick={() => handleNext('layout')}
+                      disabled={selectedImages.length === 0}
                     >
                       Next Step
                     </Button>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  {[1, 2, 3, 4].map((item) => (
-                    <div key={item} className="relative border rounded-lg overflow-hidden aspect-square bg-muted/30 group">
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-10 h-10 rounded-full border-4 border-t-vision-purple border-muted animate-spin" />
-                      </div>
-                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-black/50 flex items-center justify-center transition-opacity">
-                        <Button variant="secondary" size="sm">Select</Button>
-                      </div>
-                    </div>
-                  ))}
+                <div>
+                  <ImageGenerator
+                    goals={state.goals}
+                    userPhoto={state.userPhoto}
+                    generatedImages={state.generatedImages}
+                    onGenerateImage={addGeneratedImage}
+                    onToggleSelection={toggleImageSelection}
+                  />
                 </div>
               </div>
             </TabsContent>
@@ -215,19 +235,22 @@ Example:
                     <Button variant="outline" onClick={() => handleNext('generate')}>
                       Previous
                     </Button>
-                    <Button className="bg-vision-purple hover:bg-vision-darkPurple">
+                    <Button
+                      className="bg-vision-purple hover:bg-vision-darkPurple"
+                      disabled={selectedImages.length === 0}
+                    >
                       Create Board
                     </Button>
                   </div>
                 </div>
-                <div className="border rounded-lg overflow-hidden aspect-[4/3] bg-white shadow-md">
-                  <div className="grid grid-cols-2 gap-2 p-2 h-full">
-                    {[1, 2, 3, 4].map((item) => (
-                      <div key={item} className="bg-muted/30 rounded-lg overflow-hidden shadow-sm">
-                        <div className="aspect-square" />
-                      </div>
-                    ))}
-                  </div>
+                <div>
+                  <VisionBoardLayout 
+                    selectedImages={selectedImages}
+                    layout={state.selectedLayout}
+                    backgroundColor={state.backgroundColor}
+                    onLayoutChange={setLayout}
+                    onBackgroundColorChange={setBackgroundColor}
+                  />
                 </div>
               </div>
             </TabsContent>
