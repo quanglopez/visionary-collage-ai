@@ -1,306 +1,156 @@
-import React, { useState } from 'react';
+
+import React from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
-import { Share2, Pencil, Trash2, Plus } from 'lucide-react';
-import {
-  VisionBoard,
-  createVisionBoard,
-  updateVisionBoard,
-  deleteVisionBoard,
-  shareVisionBoard,
-} from '@/lib/visionBoard';
+import { Card } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Layout, Star, Users, Settings } from 'lucide-react';
+import SaveVisionBoardDialog from './SaveVisionBoardDialog';
 
-interface VisionBoardManagerProps {
-  boards: VisionBoard[];
-  userId: string;
-  onBoardsChange: (boards: VisionBoard[]) => void;
-  onBoardSelect: (board: VisionBoard) => void;
-}
-
-interface BoardFormData {
-  name: string;
-  description: string;
-  tags: string;
-}
-
-const VisionBoardManager: React.FC<VisionBoardManagerProps> = ({
-  boards,
-  userId,
-  onBoardsChange,
-  onBoardSelect,
-}) => {
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [editingBoard, setEditingBoard] = useState<VisionBoard | null>(null);
-  const [formData, setFormData] = useState<BoardFormData>({
-    name: '',
-    description: '',
-    tags: '',
-  });
-  const { toast } = useToast();
-
-  const handleCreateBoard = () => {
-    const tags = formData.tags.split(',').map((tag) => tag.trim()).filter(Boolean);
-    const newBoard = createVisionBoard(
-      formData.name,
-      formData.description,
-      userId,
-      tags
-    );
-    onBoardsChange([...boards, newBoard]);
-    setIsCreateDialogOpen(false);
-    setFormData({ name: '', description: '', tags: '' });
-    
-    toast({
-      title: 'Vision Board Created',
-      description: 'Your new vision board has been created successfully.',
-    });
-  };
-
-  const handleUpdateBoard = () => {
-    if (!editingBoard) return;
-
-    const tags = formData.tags.split(',').map((tag) => tag.trim()).filter(Boolean);
-    const updatedBoard = updateVisionBoard(editingBoard.id, {
-      name: formData.name,
-      description: formData.description,
-      tags,
-    });
-
-    if (updatedBoard) {
-      onBoardsChange(
-        boards.map((board) =>
-          board.id === updatedBoard.id ? updatedBoard : board
-        )
-      );
-      setEditingBoard(null);
-      setFormData({ name: '', description: '', tags: '' });
-      
-      toast({
-        title: 'Vision Board Updated',
-        description: 'Your vision board has been updated successfully.',
-      });
-    }
-  };
-
-  const handleDeleteBoard = (boardId: string) => {
-    if (deleteVisionBoard(boardId)) {
-      onBoardsChange(boards.filter((board) => board.id !== boardId));
-      
-      toast({
-        title: 'Vision Board Deleted',
-        description: 'Your vision board has been deleted successfully.',
-      });
-    }
-  };
-
-  const handleShareBoard = async (board: VisionBoard) => {
-    const share = shareVisionBoard(board.id, 7); // Share for 7 days
-    if (share) {
-      // Copy share URL to clipboard
-      await navigator.clipboard.writeText(share.shareUrl);
-      
-      toast({
-        title: 'Share Link Copied',
-        description: 'The share link has been copied to your clipboard.',
-      });
-    }
-  };
-
-  const handleEdit = (board: VisionBoard) => {
-    setEditingBoard(board);
-    setFormData({
-      name: board.name,
-      description: board.description,
-      tags: board.tags.join(', '),
-    });
-  };
-
+const VisionBoardManager: React.FC = () => {
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">My Vision Boards</h2>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              New Vision Board
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New Vision Board</DialogTitle>
-              <DialogDescription>
-                Create a new vision board to organize your collages and goals.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="name">Name</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  placeholder="My Vision Board"
-                />
-              </div>
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  placeholder="What's this vision board about?"
-                />
-              </div>
-              <div>
-                <Label htmlFor="tags">Tags (comma-separated)</Label>
-                <Input
-                  id="tags"
-                  value={formData.tags}
-                  onChange={(e) =>
-                    setFormData({ ...formData, tags: e.target.value })
-                  }
-                  placeholder="personal, goals, 2024"
-                />
+    <Card className="p-6">
+      <Tabs defaultValue="layout">
+        <TabsList className="mb-6">
+          <TabsTrigger value="layout">
+            <Layout className="mr-2 h-4 w-4" />
+            Layout
+          </TabsTrigger>
+          <TabsTrigger value="templates">
+            <Star className="mr-2 h-4 w-4" />
+            Templates
+          </TabsTrigger>
+          <TabsTrigger value="sharing">
+            <Users className="mr-2 h-4 w-4" />
+            Sharing
+          </TabsTrigger>
+          <TabsTrigger value="settings">
+            <Settings className="mr-2 h-4 w-4" />
+            Settings
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="layout">
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-xl font-bold mb-2">Current Board</h2>
+              <p className="text-muted-foreground mb-4">
+                Save your current vision board or view your previous boards
+              </p>
+              
+              <div className="flex flex-wrap gap-3">
+                <SaveVisionBoardDialog />
+                
+                <Button variant="outline" asChild>
+                  <Link to="/my-boards">My Vision Boards</Link>
+                </Button>
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleCreateBoard}>Create</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {boards.map((board) => (
-          <Card key={board.id} className="group">
-            <CardHeader>
-              <CardTitle className="flex justify-between items-start">
-                <span className="truncate">{board.name}</span>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleEdit(board)}
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleShareBoard(board)}
-                  >
-                    <Share2 className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeleteBoard(board.id)}
-                  >
-                    <Trash2 className="w-4 h-4" />
+            
+            <div>
+              <h2 className="text-xl font-bold mb-2">Layout Options</h2>
+              <div className="grid grid-cols-2 gap-3">
+                <Button variant="outline" className="h-auto py-4 flex flex-col">
+                  <div className="grid grid-cols-2 gap-1 mb-2">
+                    <div className="bg-muted rounded aspect-square"></div>
+                    <div className="bg-muted rounded aspect-square"></div>
+                    <div className="bg-muted rounded aspect-square"></div>
+                    <div className="bg-muted rounded aspect-square"></div>
+                  </div>
+                  <span>Grid</span>
+                </Button>
+                
+                <Button variant="outline" className="h-auto py-4 flex flex-col">
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    <div className="bg-muted rounded w-1/3 aspect-square"></div>
+                    <div className="bg-muted rounded w-1/2 aspect-video"></div>
+                    <div className="bg-muted rounded w-1/4 aspect-square"></div>
+                    <div className="bg-muted rounded w-2/5 aspect-video"></div>
+                  </div>
+                  <span>Freestyle</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="templates">
+          <div>
+            <h2 className="text-xl font-bold mb-2">Vision Board Templates</h2>
+            <p className="text-muted-foreground mb-4">
+              Choose from professionally designed templates
+            </p>
+            
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="relative aspect-video bg-muted rounded-lg overflow-hidden group cursor-pointer">
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Button variant="secondary" size="sm">Use Template</Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="sharing">
+          <div>
+            <h2 className="text-xl font-bold mb-2">Share Your Vision Board</h2>
+            <p className="text-muted-foreground mb-4">
+              Share your vision board with others or keep it private
+            </p>
+            
+            <div className="space-y-4">
+              <SaveVisionBoardDialog />
+              
+              <div className="border rounded-lg p-4">
+                <h3 className="font-medium mb-1">Privacy Options</h3>
+                <p className="text-sm text-muted-foreground">
+                  When you save your board, you can choose whether to make it public or private.
+                  Public boards can be shared via a link.
+                </p>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="settings">
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-xl font-bold mb-2">Board Settings</h2>
+              <p className="text-muted-foreground mb-4">
+                Customize how your vision board looks and functions
+              </p>
+              
+              <div className="space-y-4">
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-medium mb-1">Download Options</h3>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Choose how to export your vision board
+                  </p>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm">Download PNG</Button>
+                    <Button variant="outline" size="sm">Download PDF</Button>
+                  </div>
+                </div>
+                
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-medium mb-1">Account Settings</h3>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Manage your account preferences
+                  </p>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to="/my-boards">
+                      My Vision Boards
+                    </Link>
                   </Button>
                 </div>
-              </CardTitle>
-              <CardDescription>{board.description}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {board.tags.map((tag) => (
-                  <Badge key={tag} variant="secondary">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => onBoardSelect(board)}
-              >
-                View Board
-              </Button>
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
-
-      {editingBoard && (
-        <Dialog open={true} onOpenChange={() => setEditingBoard(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Edit Vision Board</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="edit-name">Name</Label>
-                <Input
-                  id="edit-name"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-description">Description</Label>
-                <Textarea
-                  id="edit-description"
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-tags">Tags (comma-separated)</Label>
-                <Input
-                  id="edit-tags"
-                  value={formData.tags}
-                  onChange={(e) =>
-                    setFormData({ ...formData, tags: e.target.value })
-                  }
-                />
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setEditingBoard(null)}>
-                Cancel
-              </Button>
-              <Button onClick={handleUpdateBoard}>Save Changes</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
-    </div>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </Card>
   );
 };
 

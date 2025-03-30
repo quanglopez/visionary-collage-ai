@@ -3,11 +3,12 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Upload, Target, PenTool, Layout } from 'lucide-react';
+import { Upload, Target, PenTool, Layout, Save } from 'lucide-react';
 import ImageUploader from './ImageUploader';
 import GoalInput from './GoalInput';
 import ImageGenerator from './ImageGenerator';
 import VisionBoardLayout from './VisionBoardLayout';
+import SaveVisionBoardDialog from './SaveVisionBoardDialog';
 import { useVisionBoard } from '@/contexts/VisionBoardContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -235,12 +236,19 @@ const WizardSection: React.FC = () => {
                     <Button variant="outline" onClick={() => handleNext('generate')}>
                       Previous
                     </Button>
-                    <Button
-                      className="bg-vision-purple hover:bg-vision-darkPurple"
-                      disabled={selectedImages.length === 0}
-                    >
-                      Create Board
-                    </Button>
+                    <div className="flex gap-2">
+                      <SaveVisionBoardDialog 
+                        trigger={
+                          <Button
+                            className="bg-vision-purple hover:bg-vision-darkPurple"
+                            disabled={selectedImages.length === 0}
+                          >
+                            <Save className="mr-2 h-4 w-4" />
+                            Save Board
+                          </Button>
+                        }
+                      />
+                    </div>
                   </div>
                 </div>
                 <div>

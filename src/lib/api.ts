@@ -1,3 +1,4 @@
+
 import OpenAI from 'openai';
 
 // Create OpenAI instance with a check for API key
@@ -62,8 +63,8 @@ export const generateControlNetImage = async ({
     // We already have File objects, so we can use them directly
     // File objects satisfy the Uploadable interface required by OpenAI
     const response = await openai.images.edit({
-      image: image,
-      mask: mask,
+      image,
+      mask,
       prompt,
       n,
       size,
