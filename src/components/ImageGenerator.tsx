@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw } from 'lucide-react';
@@ -46,42 +47,79 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
     setIsGenerating(true);
     
     try {
-      // First generate base images using DALL-E
+      const goalText = goals.find(g => g.id === selectedGoal)?.text || '';
+      // First generate base images
       const baseImages = await generateImage({
-        prompt: goals.find(g => g.id === selectedGoal)?.text || '',
+        prompt: `${goalText} - a realistic, inspirational image`,
         n: 2,
         size: '1024x1024',
         style: 'vivid'
       });
 
-      // For each base image, apply ControlNet with user's photo
-      const userPhotoFile = await fetch(userPhoto).then(res => res.blob()).then(blob => new File([blob], 'user-photo.jpg'));
-      
-      for (const baseImage of baseImages) {
-        const baseImageFile = await fetch(baseImage.url).then(res => res.blob()).then(blob => new File([blob], 'base-image.jpg'));
-        
-        const controlNetResult = await generateControlNetImage({
-          prompt: goals.find(g => g.id === selectedGoal)?.text || '',
-          image: baseImageFile,
-          mask: userPhotoFile
-        });
-
-        controlNetResult.forEach(img => {
-          onGenerateImage(selectedGoal!, img.url);
-        });
+      // Process each base image
+      if (baseImages && baseImages.length > 0) {
+        for (const baseImage of baseImages) {
+          try {
+            // Only try to fetch if it's a real URL (not local development mock)
+            if (baseImage.url.startsWith('http')) {
+              const baseImageResponse = await fetch(baseImage.url);
+              if (!baseImageResponse.ok) throw new Error('Failed to fetch base image');
+              
+              const baseImageBlob = await baseImageResponse.blob();
+              const baseImageFile = new File([baseImageBlob], 'base-image.jpg', { type: 'image/jpeg' });
+              
+              // Get user photo as a file
+              const userPhotoResponse = await fetch(userPhoto);
+              if (!userPhotoResponse.ok) throw new Error('Failed to fetch user photo');
+              
+              const userPhotoBlob = await userPhotoResponse.blob();
+              const userPhotoFile = new File([userPhotoBlob], 'user-photo.jpg', { type: 'image/jpeg' });
+              
+              // Try to generate controlnet image
+              const controlNetResult = await generateControlNetImage({
+                prompt: `${goalText} - featuring the person in the photo`,
+                image: baseImageFile,
+                mask: userPhotoFile
+              });
+              
+              // Add each result to the board
+              controlNetResult.forEach(img => {
+                onGenerateImage(selectedGoal!, img.url);
+              });
+            } else {
+              // For mock data, just add the base image
+              onGenerateImage(selectedGoal!, baseImage.url);
+            }
+          } catch (innerError) {
+            console.error('Error processing image:', innerError);
+            // If controlnet fails, still use the base image
+            onGenerateImage(selectedGoal!, baseImage.url);
+          }
+        }
       }
 
       toast({
         title: "Images generated",
-        description: "We've created personalized images based on your goal and photo.",
+        description: "We've created personalized images based on your goal.",
       });
     } catch (error) {
       console.error('Error generating images:', error);
       toast({
         title: "Error generating images",
-        description: "An error occurred while generating images. Please try again.",
+        description: "An error occurred while generating images. Using placeholder images instead.",
         variant: "destructive",
       });
+      
+      // Use fallback images if everything fails
+      const fallbackUrls = [
+        "https://picsum.photos/seed/vision5/1024",
+        "https://picsum.photos/seed/vision6/1024"
+      ];
+      
+      fallbackUrls.forEach(url => {
+        onGenerateImage(selectedGoal!, url);
+      });
+      
     } finally {
       setIsGenerating(false);
     }

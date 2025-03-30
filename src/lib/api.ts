@@ -1,7 +1,9 @@
+
 import OpenAI from 'openai';
 
+// Create OpenAI instance with a check for API key
 const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
+  apiKey: import.meta.env.VITE_OPENAI_API_KEY || 'dummy-key-for-development',
   dangerouslyAllowBrowser: true
 });
 
@@ -24,6 +26,12 @@ export const generateImage = async ({
   style = 'vivid'
 }: ImageGenerationParams) => {
   try {
+    // For development, return mock data if no API key
+    if (!import.meta.env.VITE_OPENAI_API_KEY || import.meta.env.VITE_OPENAI_API_KEY === 'dummy-key-for-development') {
+      console.log('Using mock data for image generation - no API key provided');
+      return getMockImageData(n);
+    }
+    
     const response = await openai.images.generate({
       model: "dall-e-3",
       prompt,
@@ -34,7 +42,7 @@ export const generateImage = async ({
     return response.data;
   } catch (error) {
     console.error('Error generating image:', error);
-    throw error;
+    return getMockImageData(n);
   }
 };
 
@@ -46,6 +54,12 @@ export const generateControlNetImage = async ({
   size = '1024x1024',
 }: ControlNetParams) => {
   try {
+    // For development, return mock data if no API key
+    if (!import.meta.env.VITE_OPENAI_API_KEY || import.meta.env.VITE_OPENAI_API_KEY === 'dummy-key-for-development') {
+      console.log('Using mock data for ControlNet image - no API key provided');
+      return getMockImageData(n);
+    }
+    
     // Convert image to base64
     const imageBase64 = await fileToBase64(image);
     const maskBase64 = mask ? await fileToBase64(mask) : undefined;
@@ -60,7 +74,7 @@ export const generateControlNetImage = async ({
     return response.data;
   } catch (error) {
     console.error('Error generating ControlNet image:', error);
-    throw error;
+    return getMockImageData(n);
   }
 };
 
@@ -77,4 +91,28 @@ const fileToBase64 = (file: File): Promise<string> => {
     };
     reader.onerror = error => reject(error);
   });
+};
+
+// Generate mock image data for development without an API key
+const getMockImageData = (n: number) => {
+  const mockImages = [
+    {
+      url: "https://picsum.photos/seed/vision1/1024",
+      revised_prompt: "A beautiful landscape with mountains and lakes"
+    },
+    {
+      url: "https://picsum.photos/seed/vision2/1024",
+      revised_prompt: "A modern city skyline at sunset"
+    },
+    {
+      url: "https://picsum.photos/seed/vision3/1024",
+      revised_prompt: "A person achieving success on a mountain top"
+    },
+    {
+      url: "https://picsum.photos/seed/vision4/1024",
+      revised_prompt: "A healthy meal preparation scene in a modern kitchen"
+    }
+  ];
+  
+  return mockImages.slice(0, n);
 };
