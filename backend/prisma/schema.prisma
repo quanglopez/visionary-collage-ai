@@ -1,0 +1,105 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  boards    VisionBoard[]
+  images    Image[]
+}
+
+model VisionBoard {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  collages    Collage[]
+  tags        Tag[]
+  shares      Share[]
+
+  @@index([userId])
+}
+
+model Collage {
+  id        String   @id @default(uuid())
+  name      String
+  layout    Json     // Stores layout configuration
+  cells     Json     // Stores cell positions and image mappings
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  boardId   String
+  board     VisionBoard @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  images    CollageImage[]
+
+  @@index([boardId])
+}
+
+model Image {
+  id        String   @id @default(uuid())
+  url       String
+  name      String
+  type      String
+  size      Int
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  collages  CollageImage[]
+
+  @@index([userId])
+}
+
+model CollageImage {
+  id        String   @id @default(uuid())
+  cellId    String   // ID of the cell in the collage
+  createdAt DateTime @default(now())
+
+  collageId String
+  collage   Collage  @relation(fields: [collageId], references: [id], onDelete: Cascade)
+  imageId   String
+  image     Image    @relation(fields: [imageId], references: [id])
+
+  @@unique([collageId, cellId])
+  @@index([collageId])
+  @@index([imageId])
+}
+
+model Tag {
+  id        String   @id @default(uuid())
+  name      String
+
+  boards    VisionBoard[]
+
+  @@unique([name])
+}
+
+model Share {
+  id        String    @id @default(uuid())
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+
+  boardId   String
+  board     VisionBoard @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@index([boardId])
+}

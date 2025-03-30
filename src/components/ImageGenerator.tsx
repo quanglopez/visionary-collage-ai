@@ -1,17 +1,9 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { Goal, GeneratedImage } from '@/contexts/VisionBoardContext';
 import { useToast } from '@/hooks/use-toast';
-
-// Mock data for generated images (in a real app, these would come from an API)
-const MOCK_IMAGES = [
-  '/placeholder.svg',
-  '/placeholder.svg',
-  '/placeholder.svg',
-  '/placeholder.svg',
-];
+import { generateImage, generateControlNetImage } from '@/lib/api';
 
 interface ImageGeneratorProps {
   goals: Goal[];
@@ -53,21 +45,46 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
 
     setIsGenerating(true);
     
-    // Simulate API call delay
-    setTimeout(() => {
-      // In a real app, we would call an API to generate images based on the goal
-      // For now, we'll use placeholder images
-      MOCK_IMAGES.forEach((imgUrl) => {
-        onGenerateImage(selectedGoal, imgUrl);
+    try {
+      // First generate base images using DALL-E
+      const baseImages = await generateImage({
+        prompt: goals.find(g => g.id === selectedGoal)?.text || '',
+        n: 2,
+        size: '1024x1024',
+        style: 'vivid'
       });
+
+      // For each base image, apply ControlNet with user's photo
+      const userPhotoFile = await fetch(userPhoto).then(res => res.blob()).then(blob => new File([blob], 'user-photo.jpg'));
       
-      setIsGenerating(false);
-      
+      for (const baseImage of baseImages) {
+        const baseImageFile = await fetch(baseImage.url).then(res => res.blob()).then(blob => new File([blob], 'base-image.jpg'));
+        
+        const controlNetResult = await generateControlNetImage({
+          prompt: goals.find(g => g.id === selectedGoal)?.text || '',
+          image: baseImageFile,
+          mask: userPhotoFile
+        });
+
+        controlNetResult.forEach(img => {
+          onGenerateImage(selectedGoal!, img.url);
+        });
+      }
+
       toast({
         title: "Images generated",
-        description: "We've created images based on your goal.",
+        description: "We've created personalized images based on your goal and photo.",
       });
-    }, 3000);
+    } catch (error) {
+      console.error('Error generating images:', error);
+      toast({
+        title: "Error generating images",
+        description: "An error occurred while generating images. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   // Get images for the selected goal
