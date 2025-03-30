@@ -1,4 +1,3 @@
-
 import OpenAI from 'openai';
 
 // Create OpenAI instance with a check for API key
@@ -60,13 +59,11 @@ export const generateControlNetImage = async ({
       return getMockImageData(n);
     }
     
-    // Convert image File to a Blob which is acceptable as an OpenAI Uploadable type
-    const imageBlob = new Blob([image], { type: image.type });
-    const maskBlob = mask ? new Blob([mask], { type: mask.type }) : undefined;
-
+    // We already have File objects, so we can use them directly
+    // File objects satisfy the Uploadable interface required by OpenAI
     const response = await openai.images.edit({
-      image: imageBlob,
-      mask: maskBlob,
+      image: image,
+      mask: mask,
       prompt,
       n,
       size,
@@ -78,7 +75,7 @@ export const generateControlNetImage = async ({
   }
 };
 
-// No need to change this function as we're now using Blobs directly
+// Keep this function for any future conversions that might be needed
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
